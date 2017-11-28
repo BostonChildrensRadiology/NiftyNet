@@ -374,14 +374,15 @@ def dice(prediction, ground_truth, weight_map=None):
     return 1.0 - tf.reduce_mean(dice_score)
   
   
-def cross_entropy_3d_loss(prediction, ground_truth, weights=None, gamma=2):
+def focal_loss(prediction, ground_truth, weights=None, gamma=2):
     """
     Function to calculate the cross entropy 3D loss
     :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
     :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
-    :param weights: the class weights calculated for each batch [batch, classes].
+    :param weights: the class weights calculated for each batch [1, classes].
     :param gamma: exponential weight for applyig focal loss.
-      look at: https://arxiv.org/abs/1708.02002
+      If gamma = 1 it would be the same as cross entropy 3D
+      see: https://arxiv.org/abs/1708.02002
     :return: the loss
     """
     classes = ground_truth.get_shape().as_list()[-1]
@@ -423,7 +424,7 @@ def tversky_loss(prediction, ground_truth, weights=1, alpha=0.3, beta=0.7):
     image segmentation using 3D fully convolutional deep networks
     :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
     :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
-    :param weights: the class weights calculated for each batch [batch, classes].
+    :param weights: the class weights calculated for each batch [1, classes].
     :param alpha, beta: The Tverskey parameters:
             [a0, a1, ..., an], [b0, b1, ..., bn], (number of classes).
             choose alpha=0.5, beta=0.5 for Dice loss, and keep alpha=1-beta for Fbeta losses
