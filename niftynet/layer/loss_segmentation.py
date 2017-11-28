@@ -452,9 +452,5 @@ def tversky_loss(prediction, ground_truth, weights=1, alpha=0.3, beta=0.7):
 
     numerator = weights * intersection
     denominator = intersection + alpha * fn + beta * fp
-
-    avg_dcs = tf.reduce_sum(numerator/denominator)
-
-    loss = -avg_dcs
     
-    return loss
+    return -tf.reduce_sum(numerator/denominator)
