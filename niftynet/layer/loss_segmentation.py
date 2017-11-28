@@ -416,9 +416,9 @@ def cross_entropy_3d_loss(prediction, ground_truth, weights=None, gamma=2):
     return loss
    
     
-def tversky_dice(prediction, ground_truth, weights=1, alpha=0.5, beta=0.5):
+def tversky_loss(prediction, ground_truth, weights=1, alpha=0.3, beta=0.7):
     """
-    Function to calculate the cross entropy 3d loss with the definition given in 
+    Function to calculate the tversky loss with the definition given in 
     Salehi, S.S.M., Erdogmus, D., Gholipour, A. (2017) Tversky loss function for 
     image segmentation using 3D fully convolutional deep networks
     :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
@@ -426,7 +426,8 @@ def tversky_dice(prediction, ground_truth, weights=1, alpha=0.5, beta=0.5):
     :param weights: the class weights calculated for each batch [batch, classes].
     :param alpha, beta: The Tverskey parameters:
             [a0, a1, ..., an], [b0, b1, ..., bn], (number of classes).
-            look at: https://link.springer.com/chapter/10.1007/978-3-319-67389-9_44
+            choose alpha=0.5, beta=0.5 for Dice loss, and keep alpha=1-beta for Fbeta losses
+            see: https://link.springer.com/chapter/10.1007/978-3-319-67389-9_44
     :return: the loss
     """
     classes = ground_truth.get_shape().as_list()[-1]
