@@ -374,12 +374,12 @@ def dice(prediction, ground_truth, weight_map=None):
     return 1.0 - tf.reduce_mean(dice_score)
   
   
-def focal_loss(prediction, ground_truth, weights=None, gamma=2):
+def focal_loss(prediction, ground_truth, weight_map=None, gamma=2):
     """
     Function to calculate the cross entropy 3D loss
     :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
     :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
-    :param weights: the class weights calculated for each batch [1, classes].
+    :param weight_map: the class weights calculated for each batch [1, classes].
     :param gamma: exponential weight for applyig focal loss.
       If gamma = 1 it would be the same as cross entropy 3D
       see: https://arxiv.org/abs/1708.02002
@@ -406,9 +406,9 @@ def focal_loss(prediction, ground_truth, weights=None, gamma=2):
         probabilities = tf.reduce_sum(probabilities*ground_truth_reshape, -1)
         error = error * ((1 - probabilities) ** gamma)
 
-    if weights is not None:
+    if weight_map is not None:
         weight_vect = tf.matmul(
-            tf.ones((tf.shape(ground_truth_reshape)[0], 1)), weights)
+            tf.ones((tf.shape(ground_truth_reshape)[0], 1)), weight_map)
         weight_vect = tf.reduce_sum(weight_vect*ground_truth_reshape, 1)
         loss = tf.reduce_mean(error * weight_vect)
     else:
@@ -417,14 +417,14 @@ def focal_loss(prediction, ground_truth, weights=None, gamma=2):
     return loss
    
     
-def tversky_loss(prediction, ground_truth, weights=1, alpha=0.3, beta=0.7):
+def tversky_loss(prediction, ground_truth, weight_map=1, alpha=0.3, beta=0.7):
     """
     Function to calculate the tversky loss with the definition given in 
     Salehi, S.S.M., Erdogmus, D., Gholipour, A. (2017) Tversky loss function for 
     image segmentation using 3D fully convolutional deep networks
     :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
     :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
-    :param weights: the class weights calculated for each batch [1, classes].
+    :param weight_map: the class weights calculated for each batch [1, classes].
     :param alpha, beta: The Tverskey parameters:
             [a0, a1, ..., an], [b0, b1, ..., bn], (number of classes).
             choose alpha=0.5, beta=0.5 for Dice loss, and keep alpha=1-beta for Fbeta losses
@@ -451,7 +451,7 @@ def tversky_loss(prediction, ground_truth, weights=1, alpha=0.3, beta=0.7):
     fn = tf.reduce_sum(prediction_reshape*ground_truth_reshape_C, 0)
     fp = tf.reduce_sum(prediction_reshape_C*ground_truth_reshape, 0)
 
-    numerator = weights * intersection
+    numerator = weight_map * intersection
     denominator = intersection + alpha * fn + beta * fp
     
     return -tf.reduce_sum(numerator/denominator)
