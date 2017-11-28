@@ -372,3 +372,88 @@ def dice(prediction, ground_truth, weight_map=None):
     # dice_score.set_shape([n_classes])
     # minimising (1 - dice_coefficients)
     return 1.0 - tf.reduce_mean(dice_score)
+  
+  
+def cross_entropy_3d_loss(prediction, ground_truth, weights=None, gamma=2):
+    """
+    Function to calculate the cross entropy 3D loss
+    :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
+    :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
+    :param weights: the class weights calculated for each batch [batch, classes].
+    :param gamma: exponential weight for applyig focal loss.
+      look at: https://arxiv.org/abs/1708.02002
+    :return: the loss
+    """
+    classes = ground_truth.get_shape().as_list()[-1]
+    prediction_reshape = tf.nn.softmax(tf.reshape(
+        prediction,
+        (-1, classes),
+    ))
+    
+    ground_truth_reshape = tf.reshape(
+        ground_truth,
+        (-1, classes),
+    )
+    
+    error = tf.nn.softmax_cross_entropy_with_logits(
+        ground_truth=ground_truth_reshape,
+        prediction=prediction_reshape,
+    )
+    
+    if gamma != 0:
+        probabilities = tf.nn.softmax(prediction_reshape)
+        probabilities = tf.reduce_sum(probabilities*ground_truth_reshape, -1)
+        error = error * ((1 - probabilities) ** gamma)
+
+    if weights is not None:
+        weight_vect = tf.matmul(
+            tf.ones((tf.shape(ground_truth_reshape)[0], 1)), weights)
+        weight_vect = tf.reduce_sum(weight_vect*ground_truth_reshape, 1)
+        loss = tf.reduce_mean(error * weight_vect)
+    else:
+        loss = tf.reduce_mean(error)
+
+    return loss
+   
+    
+def tversky_dice(prediction, ground_truth, weights=1, alpha=0.5, beta=0.5):
+    """
+    Function to calculate the cross entropy 3d loss with the definition given in 
+    Salehi, S.S.M., Erdogmus, D., Gholipour, A. (2017) Tversky loss function for 
+    image segmentation using 3D fully convolutional deep networks
+    :param prediction: 5D tensor of logits: [batch, dim1, dim2, dim3, classes]
+    :param ground_truth: 5D tensor of ground-truth: [batch, dim1, dim2, dim3, classes]
+    :param weights: the class weights calculated for each batch [batch, classes].
+    :param alpha, beta: The Tverskey parameters:
+            [a0, a1, ..., an], [b0, b1, ..., bn], (number of classes).
+            look at: https://link.springer.com/chapter/10.1007/978-3-319-67389-9_44
+    :return: the loss
+    """
+    classes = ground_truth.get_shape().as_list()[-1]
+
+    prediction_reshape = tf.nn.softmax(tf.reshape(
+        prediction,
+        (-1, classes),
+    ))
+    ground_truth_reshape = tf.reshape(
+        ground_truth,
+        (-1, classes),
+    )
+
+    prediction_reshape_C = \
+        tf.ones_like(prediction_reshape) - prediction_reshape
+    ground_truth_reshape_C = \
+        tf.ones_like(ground_truth_reshape) - ground_truth_reshape
+
+    intersection = tf.reduce_sum(prediction_reshape*ground_truth_reshape, 0)
+    fn = tf.reduce_sum(prediction_reshape*ground_truth_reshape_C, 0)
+    fp = tf.reduce_sum(prediction_reshape_C*ground_truth_reshape, 0)
+
+    numerator = weights * intersection
+    denominator = intersection + alpha * fn + beta * fp
+
+    avg_dcs = tf.reduce_sum(numerator/denominator)
+
+    loss = -avg_dcs
+    
+    return loss
