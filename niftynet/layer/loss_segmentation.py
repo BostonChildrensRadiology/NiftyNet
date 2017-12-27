@@ -431,27 +431,12 @@ def tversky_loss(prediction, ground_truth, weight_map=1, alpha=0.3, beta=0.7):
             see: https://link.springer.com/chapter/10.1007/978-3-319-67389-9_44
     :return: the loss
     """
-    classes = ground_truth.get_shape().as_list()[-1]
+    ground_truth = tf.contrib.layers.flatten(ground_truth)
+    ground_truth_reverse = tf.contrib.layers.flatten(1. - ground_truth)
+    prediction = tf.contrib.layers.flatten(prediction)
+    prediction_reverse = tf.contrib.layers.flatten(1. - prediction)
 
-    prediction_reshape = tf.nn.softmax(tf.reshape(
-        prediction,
-        (-1, classes),
-    ))
-    ground_truth_reshape = tf.reshape(
-        ground_truth,
-        (-1, classes),
-    )
-
-    prediction_reshape_C = \
-        tf.ones_like(prediction_reshape) - prediction_reshape
-    ground_truth_reshape_C = \
-        tf.ones_like(ground_truth_reshape) - ground_truth_reshape
-
-    intersection = tf.reduce_sum(prediction_reshape*ground_truth_reshape, 0)
-    fn = tf.reduce_sum(prediction_reshape*ground_truth_reshape_C, 0)
-    fp = tf.reduce_sum(prediction_reshape_C*ground_truth_reshape, 0)
-
-    numerator = weight_map * intersection
-    denominator = intersection + alpha * fn + beta * fp
-    
-    return -tf.reduce_sum(numerator/denominator)
+    intersection = weight_map * tf.reduce_sum(ground_truth * prediction)
+    fp = tf.reduce_sum(prediction * ground_truth_reverse)
+    fn = tf.reduce_sum(ground_truth * prediction_reverse)
+    return -intersection / (intersection + alpha * fp + beta * fn)
